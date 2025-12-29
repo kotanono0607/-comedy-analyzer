@@ -135,6 +135,7 @@ class VoicevoxAPI:
         logger.info(f"[generate_skit_audio] Total lines: {len(lines)}")
 
         audio_files = []
+        audio_index = 0  # 実際の音声ファイル連番
 
         for i, line in enumerate(lines):
             logger.debug(f"[generate_skit_audio] Line {i}: {line[:50]}...")
@@ -166,19 +167,20 @@ class VoicevoxAPI:
                 logger.error(f"[generate_skit_audio] Line {i}: FAILED - {result['error']}")
                 return {"success": False, "error": f"Line {i+1}: {result['error']}"}
 
-            # ファイル保存
-            filename = f"{i:03d}_{character}.wav"
+            # ファイル保存（連番を使用）
+            filename = f"{audio_index:03d}_{character}.wav"
             filepath = os.path.join(output_dir, filename)
             with open(filepath, "wb") as f:
                 f.write(result["audio"])
 
-            logger.info(f"[generate_skit_audio] Line {i}: Saved to {filepath}")
+            logger.info(f"[generate_skit_audio] Audio {audio_index}: Saved to {filepath}")
 
             audio_files.append({
                 "file": filepath,
                 "character": character,
                 "text": text
             })
+            audio_index += 1  # 連番をインクリメント
 
         # セリフ情報をJSONファイルとして保存
         import json

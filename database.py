@@ -2,6 +2,9 @@
 import os
 from config import DATABASE_PATH
 
+# スクリプトのディレクトリを基準にパスを解決
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 class Database:
     def __init__(self):
         os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
@@ -10,7 +13,8 @@ class Database:
         self.init_db()
 
     def init_db(self):
-        with open('models/schema.sql', 'r', encoding='utf-8') as f:
+        schema_path = os.path.join(BASE_DIR, 'models', 'schema.sql')
+        with open(schema_path, 'r', encoding='utf-8') as f:
             self.conn.executescript(f.read())
         self.conn.commit()
 

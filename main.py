@@ -251,18 +251,30 @@ class ComedyAnalyzer:
     def create_videos_tab(self):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="動画一覧")
+        top_frame = ttk.Frame(tab)
+        top_frame.pack(fill=tk.X, padx=10, pady=5)
         columns = ('video_id', 'author', 'created_at')
-        self.videos_tree = ttk.Treeview(tab, columns=columns, show='headings', height=20)
+        self.videos_tree = ttk.Treeview(top_frame, columns=columns, show='headings', height=10)
         self.videos_tree.heading('video_id', text='動画ID')
         self.videos_tree.heading('author', text='作者')
         self.videos_tree.heading('created_at', text='追加日時')
-        self.videos_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.videos_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.videos_tree.bind('<<TreeviewSelect>>', self.on_video_select)
+        btn_frame = ttk.Frame(top_frame)
+        btn_frame.pack(side=tk.LEFT, padx=10)
+        tk.Button(btn_frame, text="削除", command=self.delete_video, bg="#ff4a4a", fg="white", width=10).pack(pady=5)
         detail_frame = ttk.Frame(tab)
-        detail_frame.pack(fill=tk.X, padx=10, pady=5)
-        ttk.Label(detail_frame, text="分析結果:").pack(anchor="w")
-        self.video_detail_text = scrolledtext.ScrolledText(detail_frame, width=110, height=10, font=("Arial", 10), bg="#1e1e1e", fg="white")
-        self.video_detail_text.pack()
+        detail_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        left_detail = ttk.Frame(detail_frame)
+        left_detail.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        ttk.Label(left_detail, text="字幕（セリフ）:").pack(anchor="w")
+        self.video_transcript_text = scrolledtext.ScrolledText(left_detail, width=55, height=12, font=("Arial", 10), bg="#1e1e1e", fg="#88ff88")
+        self.video_transcript_text.pack(fill=tk.BOTH, expand=True)
+        right_detail = ttk.Frame(detail_frame)
+        right_detail.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(10, 0))
+        ttk.Label(right_detail, text="分析結果:").pack(anchor="w")
+        self.video_detail_text = scrolledtext.ScrolledText(right_detail, width=55, height=12, font=("Arial", 10), bg="#1e1e1e", fg="white")
+        self.video_detail_text.pack(fill=tk.BOTH, expand=True)
         self.refresh_videos_list()
 
     def refresh_videos_list(self):
@@ -276,10 +288,27 @@ class ComedyAnalyzer:
         if not selection:
             return
         video_db_id = int(selection[0])
+        transcript = self.db.get_transcript(video_db_id)
+        self.video_transcript_text.delete("1.0", tk.END)
+        if transcript:
+            self.video_transcript_text.insert(tk.END, transcript)
         analysis = self.db.get_analysis(video_db_id)
         self.video_detail_text.delete("1.0", tk.END)
         if analysis:
             self.video_detail_text.insert(tk.END, analysis['raw_analysis'])
+
+    def delete_video(self):
+        selection = self.videos_tree.selection()
+        if not selection:
+            self.set_status("削除する動画を選択してください")
+            return
+        video_db_id = int(selection[0])
+        if messagebox.askyesno("確認", "この動画を削除しますか？\n（字幕・分析結果も削除されます）"):
+            self.db.delete_video(video_db_id)
+            self.video_transcript_text.delete("1.0", tk.END)
+            self.video_detail_text.delete("1.0", tk.END)
+            self.refresh_videos_list()
+            self.set_status("動画を削除しました")
 
     def create_patterns_tab(self):
         tab = ttk.Frame(self.notebook)

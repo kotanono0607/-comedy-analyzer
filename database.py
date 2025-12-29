@@ -76,5 +76,11 @@ class Database:
             ORDER BY v.created_at DESC
         """, (author_id,)).fetchall()
 
+    def delete_video(self, video_db_id):
+        self.conn.execute("DELETE FROM transcripts WHERE video_id = ?", (video_db_id,))
+        self.conn.execute("DELETE FROM analyses WHERE video_id = ?", (video_db_id,))
+        self.conn.execute("DELETE FROM videos WHERE id = ?", (video_db_id,))
+        self.conn.commit()
+
     def close(self):
         self.conn.close()

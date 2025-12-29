@@ -135,18 +135,29 @@ class ComedyAnalyzer:
         left_frame = ttk.Frame(tab)
         left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
         ttk.Label(left_frame, text="作者一覧:").pack(anchor="w")
-        self.authors_listbox = tk.Listbox(left_frame, width=30, height=25, bg="#1e1e1e", fg="white")
+        self.authors_listbox = tk.Listbox(left_frame, width=30, height=20, bg="#1e1e1e", fg="white")
         self.authors_listbox.pack(pady=5)
         self.authors_listbox.bind('<<ListboxSelect>>', self.on_author_select)
         tk.Button(left_frame, text="作者パターン分析", command=self.analyze_author_patterns, bg="#4a9eff", fg="white").pack(pady=5)
+        ttk.Separator(left_frame, orient='horizontal').pack(fill=tk.X, pady=10)
+        ttk.Label(left_frame, text="コント生成:").pack(anchor="w")
+        ttk.Label(left_frame, text="テーマ（任意）:").pack(anchor="w", pady=(5, 0))
+        self.skit_theme_entry = tk.Entry(left_frame, width=28, font=("Arial", 10))
+        self.skit_theme_entry.pack(pady=5)
+        self.skit_theme_entry.insert(0, "例: コンビニ、面接、電話")
+        self.skit_theme_entry.bind('<FocusIn>', lambda e: self.skit_theme_entry.delete(0, tk.END) if self.skit_theme_entry.get().startswith("例:") else None)
+        tk.Button(left_frame, text="ショートコント生成", command=self.generate_skit, bg="#ff9f4a", fg="white").pack(pady=5)
         right_frame = ttk.Frame(tab)
         right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
         ttk.Label(right_frame, text="この作者の動画:").pack(anchor="w")
-        self.author_videos_listbox = tk.Listbox(right_frame, width=50, height=10, bg="#1e1e1e", fg="white")
+        self.author_videos_listbox = tk.Listbox(right_frame, width=50, height=6, bg="#1e1e1e", fg="white")
         self.author_videos_listbox.pack(pady=5, fill=tk.X)
         ttk.Label(right_frame, text="作者の共通パターン:").pack(anchor="w")
-        self.author_pattern_text = scrolledtext.ScrolledText(right_frame, width=70, height=15, font=("Arial", 10), bg="#1e1e1e", fg="white")
+        self.author_pattern_text = scrolledtext.ScrolledText(right_frame, width=70, height=8, font=("Arial", 10), bg="#1e1e1e", fg="white")
         self.author_pattern_text.pack(pady=5)
+        ttk.Label(right_frame, text="生成されたショートコント:").pack(anchor="w")
+        self.generated_skit_text = scrolledtext.ScrolledText(right_frame, width=70, height=12, font=("Arial", 10), bg="#1e1e1e", fg="#ffdd88")
+        self.generated_skit_text.pack(pady=5)
         self.refresh_authors_list()
 
     def refresh_authors_list(self):
@@ -195,6 +206,33 @@ class ComedyAnalyzer:
             self.set_status("作者パターン分析完了")
         else:
             self.set_status(f"エラー: {result['error']}")
+
+    def generate_skit(self):
+        selection = self.authors_listbox.curselection()
+        if not selection:
+            self.set_status("作者を選択してください")
+            return
+        author_name = self.authors_listbox.get(selection[0])
+        authors = self.db.get_authors()
+        author = next((a for a in authors if a['name'] == author_name), None)
+        if not author:
+            return
+        pattern = self.db.get_author_pattern(author['id'])
+        if not pattern:
+            self.set_status("先に作者パターン分析を実行してください")
+            return
+        theme = self.skit_theme_entry.get().strip()
+        if theme.startswith("例:"):
+            theme = ""
+        self.set_status(f"「{author_name}」風のショートコントを生成中...")
+        self.root.update()
+        result = self.gemini.generate_short_skit(author_name, pattern['analysis_summary'], theme)
+        if result['success']:
+            self.generated_skit_text.delete("1.0", tk.END)
+            self.generated_skit_text.insert(tk.END, result['skit'])
+            self.set_status(f"「{author_name}」風ショートコント生成完了")
+        else:
+            self.set_status(f"生成エラー: {result['error']}")
 
     def create_videos_tab(self):
         tab = ttk.Frame(self.notebook)

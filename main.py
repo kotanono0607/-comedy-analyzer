@@ -442,17 +442,10 @@ class ComedyAnalyzer:
             messagebox.showerror("エラー", "VOICEVOXが起動していません。\nVOICEVOXを起動してから再度お試しください。")
             return
 
-        # 前回のフォルダを取得、なければデフォルト
+        # 固定の出力フォルダ（アプリと同じ場所のaudio_outputフォルダ）
         import os
-        default_dir = self.db.get_setting("audio_output_dir", os.path.expanduser("~/Desktop/comedy_audio"))
-
-        # フォルダ選択（初期値を前回のフォルダに設定）
-        output_dir = filedialog.askdirectory(title="音声ファイルの保存先を選択", initialdir=default_dir)
-        if not output_dir:
-            return
-
-        # 選択したフォルダを保存
-        self.db.set_setting("audio_output_dir", output_dir)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        output_dir = os.path.join(script_dir, "audio_output")
 
         self.set_status("音声生成中...")
         self.root.update()

@@ -478,15 +478,8 @@ class ComedyAnalyzer:
             messagebox.showwarning("警告", "音声ファイルがありません。\n先に音声生成を行ってください。")
             return
 
-        # 現在のコントテキストを取得
-        skit_text = self.generated_skit_text.get("1.0", tk.END).strip()
-
-        # プレイヤーを開く
-        player = SkitPlayer(parent=self.root, audio_dir=audio_dir, skit_text=skit_text)
-
-        # コントテキストがあればセリフを紐付け
-        if skit_text:
-            player.set_skit_text(skit_text)
+        # プレイヤーを開く（skit_info.jsonから字幕を読み込む）
+        player = SkitPlayer(parent=self.root, audio_dir=audio_dir)
 
         self.set_status("再生プレイヤーを開きました")
 

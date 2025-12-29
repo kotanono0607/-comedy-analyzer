@@ -1,4 +1,4 @@
-﻿import google.generativeai as genai
+﻿from google import genai
 from config import GEMINI_API_KEY, GEMINI_MODEL
 
 ANALYSIS_PROMPT = '''
@@ -32,64 +32,103 @@ AUTHOR_PATTERN_PROMPT = '''
 '''
 
 GENERATE_SKIT_PROMPT = '''
-以下は「{author_name}」というコメディ作者のパターン分析結果です。
-この作者の特徴を完全に再現した、オリジナルのショートコント台本を生成してください。
+あなたは「{author_name}」のゴーストライターです。
+セリフサンプルを完全に模倣して新しいコントを書いてください。
 
-## 生成ルール
-1. この作者特有のボケパターンを使用する
-2. この作者特有のツッコミパターンを使用する
-3. この作者がよく使う構造（導入→展開→オチ）を踏襲する
-4. 1〜2分程度で演じられる長さ
-5. 台本形式で出力（登場人物名: セリフ）
+## 絶対厳守ルール
 
-## テーマ（オプション）
+### 1. セリフサンプルの構造を完全コピー
+- ボケとツッコミの役割をサンプルと同じにする
+- ツッコミのスタイル（オウム返し、冷静な指摘、等）をサンプルと同じにする
+- 両方がボケているサンプルでない限り、片方は常識人
+
+### 2. 短く
+- 5〜8往復程度
+
+### 3. トーンを合わせる
+- セリフサンプルで「！」「？」が少なければ使わない
+- 淡々としていれば淡々と
+
+## テーマ
 {theme}
 
-## 作者のパターン分析
+## ★これを完全に模倣せよ★
+{transcripts}
+
+## 参考
+{analyses}
+
 {pattern}
 
-## 出力形式
+## 出力
 タイトル: 〇〇
 
-【登場人物】
-- A: 説明
-- B: 説明
-
-【台本】
-A: セリフ
-B: セリフ
+A:
+B:
 ...
 '''
 
 class GeminiAPI:
     def __init__(self):
-        genai.configure(api_key=GEMINI_API_KEY)
-        self.model = genai.GenerativeModel(GEMINI_MODEL)
+        self.client = genai.Client(api_key=GEMINI_API_KEY)
+        self.model_name = GEMINI_MODEL
+
+    def _generate(self, prompt):
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=prompt
+        )
+        return response.text
 
     def analyze_video(self, transcript):
         try:
             prompt = ANALYSIS_PROMPT.format(transcript=transcript)
-            response = self.model.generate_content(prompt)
-            return {'success': True, 'analysis': response.text}
+            return {'success': True, 'analysis': self._generate(prompt)}
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
     def analyze_author_patterns(self, analyses_text):
         try:
             prompt = AUTHOR_PATTERN_PROMPT.format(analyses=analyses_text)
-            response = self.model.generate_content(prompt)
-            return {'success': True, 'analysis': response.text}
+            return {'success': True, 'analysis': self._generate(prompt)}
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
-    def generate_short_skit(self, author_name, pattern, theme="自由"):
+    def generate_short_skit(self, author_name, pattern, transcripts, analyses, theme="自由"):
         try:
             prompt = GENERATE_SKIT_PROMPT.format(
                 author_name=author_name,
-                pattern=pattern,
+                pattern=pattern if pattern else "（パターン分析なし）",
+                transcripts=transcripts,
+                analyses=analyses if analyses else "（分析結果なし）",
                 theme=theme if theme else "自由"
             )
-            response = self.model.generate_content(prompt)
-            return {'success': True, 'skit': response.text}
+            return {'success': True, 'skit': self._generate(prompt)}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    def convert_to_character(self, skit, char_a_info, char_b_info):
+        try:
+            prompt = f'''
+以下のコントを、指定されたキャラクターの口調に変換してください。
+内容は変えず、口調だけを変えてください。
+
+## キャラA: {char_a_info['name']}
+口調: {char_a_info['tone']}
+例: {char_a_info['example']}
+
+## キャラB: {char_b_info['name']}
+口調: {char_b_info['tone']}
+例: {char_b_info['example']}
+
+## 元のコント
+{skit}
+
+## 出力形式
+{char_a_info['name']}:
+{char_b_info['name']}:
+...
+'''
+            return {'success': True, 'skit': self._generate(prompt)}
         except Exception as e:
             return {'success': False, 'error': str(e)}

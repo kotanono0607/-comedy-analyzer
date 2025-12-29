@@ -2,6 +2,9 @@
 import os
 from config import DATABASE_PATH
 
+# スクリプトのディレクトリを基準にパスを解決
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 class Database:
     def __init__(self):
         os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
@@ -10,7 +13,8 @@ class Database:
         self.init_db()
 
     def init_db(self):
-        with open('models/schema.sql', 'r', encoding='utf-8') as f:
+        schema_path = os.path.join(BASE_DIR, 'models', 'schema.sql')
+        with open(schema_path, 'r', encoding='utf-8') as f:
             self.conn.executescript(f.read())
         self.conn.commit()
 
@@ -62,6 +66,21 @@ class Database:
 
     def get_author_pattern(self, author_id):
         return self.conn.execute("SELECT * FROM author_patterns WHERE author_id = ?", (author_id,)).fetchone()
+
+    def get_transcripts_by_author(self, author_id):
+        return self.conn.execute("""
+            SELECT t.content, v.video_id as youtube_id
+            FROM transcripts t
+            JOIN videos v ON t.video_id = v.id
+            WHERE v.author_id = ?
+            ORDER BY v.created_at DESC
+        """, (author_id,)).fetchall()
+
+    def delete_video(self, video_db_id):
+        self.conn.execute("DELETE FROM transcripts WHERE video_id = ?", (video_db_id,))
+        self.conn.execute("DELETE FROM analyses WHERE video_id = ?", (video_db_id,))
+        self.conn.execute("DELETE FROM videos WHERE id = ?", (video_db_id,))
+        self.conn.commit()
 
     def close(self):
         self.conn.close()

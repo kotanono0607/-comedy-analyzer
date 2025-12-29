@@ -82,5 +82,41 @@ class Database:
         self.conn.execute("DELETE FROM videos WHERE id = ?", (video_db_id,))
         self.conn.commit()
 
+    # 設定関連
+    def get_setting(self, key, default=None):
+        result = self.conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+        return result['value'] if result else default
+
+    def set_setting(self, key, value):
+        self.conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value))
+        self.conn.commit()
+
+    # 生成トーク関連
+    def save_skit(self, author_id, title, content, theme=None, char_a=None, char_b=None):
+        cursor = self.conn.execute(
+            "INSERT INTO generated_skits (author_id, title, content, theme, char_a, char_b) VALUES (?, ?, ?, ?, ?, ?)",
+            (author_id, title, content, theme, char_a, char_b)
+        )
+        self.conn.commit()
+        return cursor.lastrowid
+
+    def get_skits_by_author(self, author_id):
+        return self.conn.execute(
+            "SELECT * FROM generated_skits WHERE author_id = ? ORDER BY created_at DESC",
+            (author_id,)
+        ).fetchall()
+
+    def get_all_skits(self):
+        return self.conn.execute(
+            "SELECT s.*, a.name as author_name FROM generated_skits s LEFT JOIN authors a ON s.author_id = a.id ORDER BY s.created_at DESC"
+        ).fetchall()
+
+    def get_skit(self, skit_id):
+        return self.conn.execute("SELECT * FROM generated_skits WHERE id = ?", (skit_id,)).fetchone()
+
+    def delete_skit(self, skit_id):
+        self.conn.execute("DELETE FROM generated_skits WHERE id = ?", (skit_id,))
+        self.conn.commit()
+
     def close(self):
         self.conn.close()

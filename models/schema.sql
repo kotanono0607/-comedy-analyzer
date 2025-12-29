@@ -44,3 +44,20 @@ CREATE TABLE IF NOT EXISTS author_patterns (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (author_id) REFERENCES authors(id)
 );
+
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS generated_skits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    author_id INTEGER,
+    title TEXT,
+    content TEXT NOT NULL,
+    theme TEXT,
+    char_a TEXT,
+    char_b TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (author_id) REFERENCES authors(id)
+);

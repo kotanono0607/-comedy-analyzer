@@ -60,12 +60,15 @@ GENERATE_SKIT_PROMPT = '''
 
 {pattern}
 
-## 出力
+## 出力形式（厳守）
+必ず「キャラ名: セリフ」を1行で書く。改行してはいけない。
+
 タイトル: 〇〇
 
-A:
-B:
-...
+A: ここにAのセリフを書く
+B: ここにBのセリフを書く
+A: 次のAのセリフ
+B: 次のBのセリフ
 '''
 
 class GeminiAPI:
@@ -124,10 +127,11 @@ class GeminiAPI:
 ## 元のコント
 {skit}
 
-## 出力形式
-{char_a_info['name']}:
-{char_b_info['name']}:
-...
+## 出力形式（厳守）
+必ず「キャラ名: セリフ」を1行で書く。改行してはいけない。
+
+{char_a_info['name']}: ここにセリフを書く
+{char_b_info['name']}: ここにセリフを書く
 '''
             return {'success': True, 'skit': self._generate(prompt)}
         except Exception as e:

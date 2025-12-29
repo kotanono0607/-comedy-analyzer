@@ -114,11 +114,18 @@ class VoicevoxAPI:
         # 音声合成
         return self.synthesize(query_result["query"], speaker_id)
 
-    def generate_skit_audio(self, skit_text, output_dir):
-        """コント全体の音声を生成"""
+    def generate_skit_audio(self, skit_text, output_dir, char_mapping=None):
+        """コント全体の音声を生成
+
+        Args:
+            skit_text: コントのテキスト
+            output_dir: 出力ディレクトリ
+            char_mapping: キャラクター名のマッピング（例: {"A": "ずんだもん", "B": "四国めたん"}）
+        """
         import re
 
         logger.info(f"[generate_skit_audio] START - output_dir: {output_dir}")
+        logger.info(f"[generate_skit_audio] char_mapping: {char_mapping}")
         logger.debug(f"[generate_skit_audio] skit_text:\n{skit_text[:500]}...")
 
         os.makedirs(output_dir, exist_ok=True)
@@ -142,6 +149,12 @@ class VoicevoxAPI:
             text = match.group(2).strip()
 
             logger.info(f"[generate_skit_audio] Line {i}: character={character}, text={text[:30]}...")
+
+            # キャラクターマッピングを適用
+            if char_mapping and character in char_mapping:
+                mapped_character = char_mapping[character]
+                logger.info(f"[generate_skit_audio] Line {i}: Mapping '{character}' -> '{mapped_character}'")
+                character = mapped_character
 
             if character not in SPEAKER_IDS:
                 logger.warning(f"[generate_skit_audio] Line {i}: Unknown character '{character}', skipping")

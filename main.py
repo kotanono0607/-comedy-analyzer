@@ -362,7 +362,13 @@ class ComedyAnalyzer:
         self.set_status("音声生成中...")
         self.root.update()
 
-        result = self.voicevox.generate_skit_audio(skit, output_dir)
+        # A/Bを選択されたキャラクターにマッピング
+        char_mapping = {
+            "A": self.char_a_combo.get(),
+            "B": self.char_b_combo.get(),
+        }
+
+        result = self.voicevox.generate_skit_audio(skit, output_dir, char_mapping)
         if result['success']:
             file_count = len(result['files'])
             self.set_status(f"音声生成完了（{file_count}ファイル → {output_dir}）")

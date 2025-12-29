@@ -43,7 +43,6 @@ class VoicevoxAPI:
             response = requests.post(
                 f"{self.base_url}/synthesis",
                 params={"speaker": speaker_id},
-                headers={"Content-Type": "application/json"},
                 data=json.dumps(query),
                 timeout=60
             )

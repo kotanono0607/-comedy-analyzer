@@ -5,6 +5,12 @@ from youtube_api import YouTubeAPI
 from gemini_api import GeminiAPI
 
 class ComedyAnalyzer:
+    VOICEVOX_CHARACTERS = [
+        "ずんだもん",
+        "四国めたん",
+        "春日部つむぎ",
+    ]
+
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("コメディ分析ツール")
@@ -158,6 +164,19 @@ class ComedyAnalyzer:
         self.skit_theme_entry.insert(0, "例: コンビニ、面接、電話")
         self.skit_theme_entry.bind('<FocusIn>', lambda e: self.skit_theme_entry.delete(0, tk.END) if self.skit_theme_entry.get().startswith("例:") else None)
         tk.Button(left_frame, text="ショートコント生成", command=self.generate_skit, bg="#ff9f4a", fg="white", width=20, height=2).pack(pady=10)
+        ttk.Separator(left_frame, orient='horizontal').pack(fill=tk.X, pady=10)
+        ttk.Label(left_frame, text="VOICEVOX割り当て:").pack(anchor="w")
+        char_frame = ttk.Frame(left_frame)
+        char_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(char_frame, text="A:").pack(side=tk.LEFT)
+        self.char_a_combo = ttk.Combobox(char_frame, values=self.VOICEVOX_CHARACTERS, width=12)
+        self.char_a_combo.pack(side=tk.LEFT, padx=2)
+        self.char_a_combo.current(0)
+        ttk.Label(char_frame, text="B:").pack(side=tk.LEFT, padx=(5, 0))
+        self.char_b_combo = ttk.Combobox(char_frame, values=self.VOICEVOX_CHARACTERS, width=12)
+        self.char_b_combo.pack(side=tk.LEFT, padx=2)
+        self.char_b_combo.current(1)
+        tk.Button(left_frame, text="台本コピー", command=self.copy_script, bg="#9f4aff", fg="white", width=20).pack(pady=5)
         right_frame = ttk.Frame(tab)
         right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
         top_right = ttk.Frame(right_frame)
@@ -255,6 +274,27 @@ class ComedyAnalyzer:
             self.set_status(f"「{author_name}」風ショートコント生成完了")
         else:
             self.set_status(f"生成エラー: {result['error']}")
+
+    def copy_script(self):
+        skit = self.generated_skit_text.get("1.0", tk.END).strip()
+        if not skit:
+            self.set_status("先にコントを生成してください")
+            return
+        char_a = self.char_a_combo.get()
+        char_b = self.char_b_combo.get()
+        lines = []
+        for line in skit.split('\n'):
+            line = line.strip()
+            if line.startswith('A:'):
+                lines.append(f'{char_a}「{line[2:].strip()}」')
+            elif line.startswith('B:'):
+                lines.append(f'{char_b}「{line[2:].strip()}」')
+            elif line:
+                lines.append(line)
+        result = '\n'.join(lines)
+        self.root.clipboard_clear()
+        self.root.clipboard_append(result)
+        self.set_status(f"台本をコピーしました（{char_a} / {char_b}）")
 
     def create_videos_tab(self):
         tab = ttk.Frame(self.notebook)

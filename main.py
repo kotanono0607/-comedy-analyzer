@@ -4,6 +4,7 @@ from database import Database
 from youtube_api import YouTubeAPI
 from gemini_api import GeminiAPI
 from voicevox_api import VoicevoxAPI
+from player import SkitPlayer
 
 class ComedyAnalyzer:
     VOICEVOX_CHARACTERS = {
@@ -197,6 +198,7 @@ class ComedyAnalyzer:
         tk.Button(left_frame, text="台本コピー", command=self.copy_script, bg="#9f4aff", fg="white", width=20).pack(pady=5)
         tk.Button(left_frame, text="トーク保存", command=self.save_skit, bg="#4a9fff", fg="white", width=20).pack(pady=5)
         tk.Button(left_frame, text="音声生成", command=self.generate_audio, bg="#ff4a9f", fg="white", width=20).pack(pady=5)
+        tk.Button(left_frame, text="再生プレイヤー", command=self.open_player, bg="#ff9f4a", fg="white", width=20).pack(pady=5)
         ttk.Separator(left_frame, orient='horizontal').pack(fill=tk.X, pady=10)
         ttk.Label(left_frame, text="保存済みトーク:").pack(anchor="w")
         self.skits_listbox = tk.Listbox(left_frame, width=25, height=6, bg="#1e1e1e", fg="white", font=("Arial", 10))
@@ -464,6 +466,29 @@ class ComedyAnalyzer:
         else:
             self.set_status(f"音声生成エラー: {result['error']}")
             messagebox.showerror("エラー", result['error'])
+
+    def open_player(self):
+        """再生プレイヤーを開く"""
+        import os
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        audio_dir = os.path.join(script_dir, "audio_output")
+
+        # 音声フォルダが存在するか確認
+        if not os.path.exists(audio_dir) or not os.listdir(audio_dir):
+            messagebox.showwarning("警告", "音声ファイルがありません。\n先に音声生成を行ってください。")
+            return
+
+        # 現在のコントテキストを取得
+        skit_text = self.generated_skit_text.get("1.0", tk.END).strip()
+
+        # プレイヤーを開く
+        player = SkitPlayer(parent=self.root, audio_dir=audio_dir, skit_text=skit_text)
+
+        # コントテキストがあればセリフを紐付け
+        if skit_text:
+            player.set_skit_text(skit_text)
+
+        self.set_status("再生プレイヤーを開きました")
 
     def create_videos_tab(self):
         tab = ttk.Frame(self.notebook)

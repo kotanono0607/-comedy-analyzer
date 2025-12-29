@@ -1,0 +1,6 @@
+﻿data/*.db
+__pycache__/
+*.py[cod]
+venv/
+.env
+config.py

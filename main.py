@@ -57,6 +57,8 @@ class ComedyAnalyzer:
         self.refresh_authors_list()
         self.refresh_videos_list()
         self.refresh_author_combo()
+        if hasattr(self, 'skits_listbox'):
+            self.refresh_skits_list()
 
     def create_analyze_tab(self):
         tab = ttk.Frame(self.notebook)
@@ -193,7 +195,14 @@ class ComedyAnalyzer:
         self.char_b_combo.current(1)
         tk.Button(left_frame, text="口調変換", command=self.convert_to_character, bg="#4aff9f", fg="black", width=20).pack(pady=5)
         tk.Button(left_frame, text="台本コピー", command=self.copy_script, bg="#9f4aff", fg="white", width=20).pack(pady=5)
+        tk.Button(left_frame, text="トーク保存", command=self.save_skit, bg="#4a9fff", fg="white", width=20).pack(pady=5)
         tk.Button(left_frame, text="音声生成", command=self.generate_audio, bg="#ff4a9f", fg="white", width=20).pack(pady=5)
+        ttk.Separator(left_frame, orient='horizontal').pack(fill=tk.X, pady=10)
+        ttk.Label(left_frame, text="保存済みトーク:").pack(anchor="w")
+        self.skits_listbox = tk.Listbox(left_frame, width=25, height=6, bg="#1e1e1e", fg="white", font=("Arial", 10))
+        self.skits_listbox.pack(pady=5)
+        self.skits_listbox.bind('<<ListboxSelect>>', self.on_skit_select)
+        tk.Button(left_frame, text="トーク削除", command=self.delete_skit, bg="#ff4a4a", fg="white", width=20).pack(pady=5)
         right_frame = ttk.Frame(tab)
         right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
         top_right = ttk.Frame(right_frame)
@@ -212,6 +221,7 @@ class ComedyAnalyzer:
         self.generated_skit_text = scrolledtext.ScrolledText(right_frame, width=100, height=25, font=("Arial", 11), bg="#1e1e1e", fg="#ffdd88")
         self.generated_skit_text.pack(pady=5, fill=tk.BOTH, expand=True)
         self.refresh_authors_list()
+        self.refresh_skits_list()
 
     def refresh_authors_list(self):
         self.authors_listbox.delete(0, tk.END)
@@ -317,6 +327,83 @@ class ComedyAnalyzer:
         self.root.clipboard_append(result)
         self.set_status(f"台本をコピーしました（{char_a} / {char_b}）")
 
+    def save_skit(self):
+        skit = self.generated_skit_text.get("1.0", tk.END).strip()
+        if not skit:
+            self.set_status("先にコントを生成してください")
+            return
+
+        # 作者を取得
+        selection = self.authors_listbox.curselection()
+        if not selection:
+            self.set_status("作者を選択してください")
+            return
+
+        author_name = self.authors_listbox.get(selection[0])
+        authors = self.db.get_authors()
+        author = next((a for a in authors if a['name'] == author_name), None)
+        if not author:
+            return
+
+        # タイトルを入力
+        title = simpledialog.askstring("トーク保存", "タイトルを入力してください:")
+        if not title:
+            return
+
+        theme = self.skit_theme_entry.get().strip()
+        if theme.startswith("例:"):
+            theme = ""
+
+        char_a = self.char_a_combo.get()
+        char_b = self.char_b_combo.get()
+
+        self.db.save_skit(author['id'], title, skit, theme, char_a, char_b)
+        self.refresh_skits_list()
+        self.set_status(f"トーク「{title}」を保存しました")
+
+    def refresh_skits_list(self):
+        self.skits_listbox.delete(0, tk.END)
+        for skit in self.db.get_all_skits():
+            display = f"{skit['title']} ({skit['author_name'] or '不明'})"
+            self.skits_listbox.insert(tk.END, display)
+        # IDを保持
+        self._skit_ids = [skit['id'] for skit in self.db.get_all_skits()]
+
+    def on_skit_select(self, event):
+        selection = self.skits_listbox.curselection()
+        if not selection:
+            return
+
+        if not hasattr(self, '_skit_ids') or selection[0] >= len(self._skit_ids):
+            return
+
+        skit_id = self._skit_ids[selection[0]]
+        skit = self.db.get_skit(skit_id)
+        if skit:
+            self.generated_skit_text.delete("1.0", tk.END)
+            self.generated_skit_text.insert(tk.END, skit['content'])
+            if skit['char_a']:
+                self.char_a_combo.set(skit['char_a'])
+            if skit['char_b']:
+                self.char_b_combo.set(skit['char_b'])
+            self.set_status(f"トーク「{skit['title']}」を読み込みました")
+
+    def delete_skit(self):
+        selection = self.skits_listbox.curselection()
+        if not selection:
+            self.set_status("削除するトークを選択してください")
+            return
+
+        if not hasattr(self, '_skit_ids') or selection[0] >= len(self._skit_ids):
+            return
+
+        skit_id = self._skit_ids[selection[0]]
+        skit = self.db.get_skit(skit_id)
+        if skit and messagebox.askyesno("確認", f"トーク「{skit['title']}」を削除しますか？"):
+            self.db.delete_skit(skit_id)
+            self.refresh_skits_list()
+            self.set_status("トークを削除しました")
+
     def convert_to_character(self):
         skit = self.generated_skit_text.get("1.0", tk.END).strip()
         if not skit:
@@ -355,9 +442,17 @@ class ComedyAnalyzer:
             messagebox.showerror("エラー", "VOICEVOXが起動していません。\nVOICEVOXを起動してから再度お試しください。")
             return
 
-        output_dir = filedialog.askdirectory(title="音声ファイルの保存先を選択")
+        # 前回のフォルダを取得、なければデフォルト
+        import os
+        default_dir = self.db.get_setting("audio_output_dir", os.path.expanduser("~/Desktop/comedy_audio"))
+
+        # フォルダ選択（初期値を前回のフォルダに設定）
+        output_dir = filedialog.askdirectory(title="音声ファイルの保存先を選択", initialdir=default_dir)
         if not output_dir:
             return
+
+        # 選択したフォルダを保存
+        self.db.set_setting("audio_output_dir", output_dir)
 
         self.set_status("音声生成中...")
         self.root.update()

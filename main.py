@@ -1,8 +1,9 @@
 ﻿import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox, simpledialog
+from tkinter import ttk, scrolledtext, messagebox, simpledialog, filedialog
 from database import Database
 from youtube_api import YouTubeAPI
 from gemini_api import GeminiAPI
+from voicevox_api import VoicevoxAPI
 
 class ComedyAnalyzer:
     VOICEVOX_CHARACTERS = {
@@ -31,6 +32,7 @@ class ComedyAnalyzer:
         self.db = Database()
         self.yt = YouTubeAPI()
         self.gemini = GeminiAPI()
+        self.voicevox = VoicevoxAPI()
         self.setup_styles()
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -191,6 +193,7 @@ class ComedyAnalyzer:
         self.char_b_combo.current(1)
         tk.Button(left_frame, text="口調変換", command=self.convert_to_character, bg="#4aff9f", fg="black", width=20).pack(pady=5)
         tk.Button(left_frame, text="台本コピー", command=self.copy_script, bg="#9f4aff", fg="white", width=20).pack(pady=5)
+        tk.Button(left_frame, text="音声生成", command=self.generate_audio, bg="#ff4a9f", fg="white", width=20).pack(pady=5)
         right_frame = ttk.Frame(tab)
         right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
         top_right = ttk.Frame(right_frame)
@@ -340,6 +343,33 @@ class ComedyAnalyzer:
             self.set_status(f"口調変換完了（{char_a_name} / {char_b_name}）")
         else:
             self.set_status(f"変換エラー: {result['error']}")
+
+    def generate_audio(self):
+        skit = self.generated_skit_text.get("1.0", tk.END).strip()
+        if not skit:
+            self.set_status("先にコントを生成してください")
+            return
+
+        if not self.voicevox.is_available():
+            self.set_status("VOICEVOXが起動していません（localhost:50021）")
+            messagebox.showerror("エラー", "VOICEVOXが起動していません。\nVOICEVOXを起動してから再度お試しください。")
+            return
+
+        output_dir = filedialog.askdirectory(title="音声ファイルの保存先を選択")
+        if not output_dir:
+            return
+
+        self.set_status("音声生成中...")
+        self.root.update()
+
+        result = self.voicevox.generate_skit_audio(skit, output_dir)
+        if result['success']:
+            file_count = len(result['files'])
+            self.set_status(f"音声生成完了（{file_count}ファイル → {output_dir}）")
+            messagebox.showinfo("完了", f"{file_count}個の音声ファイルを生成しました。\n\n保存先: {output_dir}")
+        else:
+            self.set_status(f"音声生成エラー: {result['error']}")
+            messagebox.showerror("エラー", result['error'])
 
     def create_videos_tab(self):
         tab = ttk.Frame(self.notebook)

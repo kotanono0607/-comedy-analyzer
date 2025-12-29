@@ -204,27 +204,46 @@ class SkitPlayer:
 
     def load_audio_files(self, folder):
         """音声ファイルを読み込む"""
+        import json
+
         self.audio_dir = folder
         self.audio_files = []
 
-        # wavファイルを番号順にソート
-        files = [f for f in os.listdir(folder) if f.endswith('.wav')]
-        files.sort()
+        # skit_info.jsonがあれば読み込む
+        skit_info_path = os.path.join(folder, "skit_info.json")
+        if os.path.exists(skit_info_path):
+            try:
+                with open(skit_info_path, "r", encoding="utf-8") as f:
+                    skit_info = json.load(f)
+                for i, info in enumerate(skit_info):
+                    filepath = os.path.join(folder, info["file"])
+                    if os.path.exists(filepath):
+                        self.audio_files.append({
+                            'file': filepath,
+                            'character': info["character"],
+                            'text': info["text"],
+                            'index': i
+                        })
+            except Exception as e:
+                print(f"skit_info.json読み込みエラー: {e}")
 
-        for filename in files:
-            filepath = os.path.join(folder, filename)
-            # ファイル名からキャラクター名とテキストを推測
-            # 形式: 001_ずんだもん.wav
-            match = re.match(r'(\d+)_(.+)\.wav', filename)
-            if match:
-                index = int(match.group(1))
-                character = match.group(2)
-                self.audio_files.append({
-                    'file': filepath,
-                    'character': character,
-                    'text': f"（セリフ {index + 1}）",  # テキストは後で設定可能
-                    'index': index
-                })
+        # JSONがない場合はファイル名から推測
+        if not self.audio_files:
+            files = [f for f in os.listdir(folder) if f.endswith('.wav')]
+            files.sort()
+
+            for filename in files:
+                filepath = os.path.join(folder, filename)
+                match = re.match(r'(\d+)_(.+)\.wav', filename)
+                if match:
+                    index = int(match.group(1))
+                    character = match.group(2)
+                    self.audio_files.append({
+                        'file': filepath,
+                        'character': character,
+                        'text': f"（セリフ {index + 1}）",
+                        'index': index
+                    })
 
         self.current_index = 0
         self.update_line_list()

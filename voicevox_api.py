@@ -180,5 +180,19 @@ class VoicevoxAPI:
                 "text": text
             })
 
+        # セリフ情報をJSONファイルとして保存
+        import json
+        skit_info_path = os.path.join(output_dir, "skit_info.json")
+        skit_info = []
+        for audio in audio_files:
+            skit_info.append({
+                "file": os.path.basename(audio["file"]),
+                "character": audio["character"],
+                "text": audio["text"]
+            })
+        with open(skit_info_path, "w", encoding="utf-8") as f:
+            json.dump(skit_info, f, ensure_ascii=False, indent=2)
+        logger.info(f"[generate_skit_audio] Saved skit info to {skit_info_path}")
+
         logger.info(f"[generate_skit_audio] COMPLETE - {len(audio_files)} files generated")
         return {"success": True, "files": audio_files}

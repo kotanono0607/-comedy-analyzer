@@ -48,8 +48,8 @@ jobs:
             PR_NUMBER=$EXISTING_PR
           fi
 
-          # Auto merge the PR
+          # Merge the PR directly
           echo "Merging PR #$PR_NUMBER..."
-          gh pr merge "$PR_NUMBER" --squash --auto --delete-branch
+          gh pr merge "$PR_NUMBER" --squash --delete-branch
 
-          echo "Auto merge initiated for PR #$PR_NUMBER"
+          echo "PR #$PR_NUMBER merged successfully"

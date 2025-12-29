@@ -17,39 +17,40 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.ref }}
 
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Create PR and Auto Merge
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Rebase on main and force push
         run: |
           BRANCH_NAME="${GITHUB_REF#refs/heads/}"
           echo "Processing branch: $BRANCH_NAME"
 
-          # Check if PR already exists
-          EXISTING_PR=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number' 2>/dev/null || echo "")
+          # Fetch latest main
+          git fetch origin main
 
-          if [ -z "$EXISTING_PR" ]; then
-            # Create new PR
-            echo "Creating new PR..."
-            PR_URL=$(gh pr create \
-              --title "Auto merge: $BRANCH_NAME" \
-              --body "Automated PR from branch \`$BRANCH_NAME\`" \
-              --base main \
-              --head "$BRANCH_NAME")
-            echo "Created PR: $PR_URL"
-            PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
-          else
-            echo "PR #$EXISTING_PR already exists"
-            PR_NUMBER=$EXISTING_PR
-          fi
+          # Rebase current branch on main
+          git rebase origin/main
 
-          # Merge the PR directly
-          echo "Merging PR #$PR_NUMBER..."
-          gh pr merge "$PR_NUMBER" --squash --delete-branch
+          # Force push the rebased branch
+          git push origin "$BRANCH_NAME" --force-with-lease
 
-          echo "PR #$PR_NUMBER merged successfully"
+      - name: Merge to main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+
+          # Checkout main and merge
+          git checkout main
+          git pull origin main
+          git merge "$BRANCH_NAME" --no-ff -m "Merge $BRANCH_NAME into main"
+          git push origin main
+
+          # Delete the feature branch
+          git push origin --delete "$BRANCH_NAME" || true
+
+          echo "Successfully merged $BRANCH_NAME into main"

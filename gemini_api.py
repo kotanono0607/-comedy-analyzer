@@ -32,9 +32,9 @@ AUTHOR_PATTERN_PROMPT = '''
 '''
 
 GENERATE_SKIT_PROMPT = '''
-以下は「{author_name}」というコメディ作者の実際のセリフサンプルです。
-このセリフの「言い回し」「口調」「ニュアンス」「間の取り方」を徹底的に模倣して、
-オリジナルのショートコント台本を生成してください。
+以下は「{author_name}」というコメディ作者のデータです。
+「実際のセリフ」と「各動画の分析結果」を参照して、
+この作者の特徴を完全に再現したオリジナルのショートコント台本を生成してください。
 
 ## 最重要：セリフのニュアンス再現
 - 実際のセリフサンプルの言葉選び、語尾、リズムを完全にコピーする
@@ -44,8 +44,9 @@ GENERATE_SKIT_PROMPT = '''
 
 ## 生成ルール
 1. セリフサンプルにある表現をベースに新しいネタを作る
-2. 1〜2分程度で演じられる長さ
-3. 台本形式で出力
+2. 各動画の分析結果を参考に構造やパターンを踏襲する
+3. 1〜2分程度で演じられる長さ
+4. 台本形式で出力
 
 ## テーマ
 {theme}
@@ -53,7 +54,10 @@ GENERATE_SKIT_PROMPT = '''
 ## 実際のセリフサンプル（これを模倣する）
 {transcripts}
 
-## 参考：パターン分析（補助情報）
+## 各動画の分析結果（構造・パターンを参考にする）
+{analyses}
+
+## 作者の共通パターン（補助情報）
 {pattern}
 
 ## 出力形式
@@ -86,12 +90,13 @@ class GeminiAPI:
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
-    def generate_short_skit(self, author_name, pattern, transcripts, theme="自由"):
+    def generate_short_skit(self, author_name, pattern, transcripts, analyses, theme="自由"):
         try:
             prompt = GENERATE_SKIT_PROMPT.format(
                 author_name=author_name,
                 pattern=pattern if pattern else "（パターン分析なし）",
                 transcripts=transcripts,
+                analyses=analyses if analyses else "（分析結果なし）",
                 theme=theme if theme else "自由"
             )
             response = self.model.generate_content(prompt)

@@ -232,15 +232,17 @@ class ComedyAnalyzer:
         if not transcripts:
             self.set_status("この作者の字幕データがありません")
             return
+        analyses = self.db.get_analyses_by_author(author['id'])
         pattern = self.db.get_author_pattern(author['id'])
         pattern_text = pattern['analysis_summary'] if pattern else ""
         transcripts_text = "\n\n---\n\n".join([f"【{t['youtube_id']}】\n{t['content']}" for t in transcripts])
+        analyses_text = "\n\n---\n\n".join([f"【{a['youtube_id']}】\n{a['raw_analysis']}" for a in analyses]) if analyses else ""
         theme = self.skit_theme_entry.get().strip()
         if theme.startswith("例:"):
             theme = ""
         self.set_status(f"「{author_name}」風のショートコントを生成中...")
         self.root.update()
-        result = self.gemini.generate_short_skit(author_name, pattern_text, transcripts_text, theme)
+        result = self.gemini.generate_short_skit(author_name, pattern_text, transcripts_text, analyses_text, theme)
         if result['success']:
             self.generated_skit_text.delete("1.0", tk.END)
             self.generated_skit_text.insert(tk.END, result['skit'])

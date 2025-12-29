@@ -1,4 +1,4 @@
-﻿import google.generativeai as genai
+﻿from google import genai
 from config import GEMINI_API_KEY, GEMINI_MODEL
 
 ANALYSIS_PROMPT = '''
@@ -70,22 +70,27 @@ B:
 
 class GeminiAPI:
     def __init__(self):
-        genai.configure(api_key=GEMINI_API_KEY)
-        self.model = genai.GenerativeModel(GEMINI_MODEL)
+        self.client = genai.Client(api_key=GEMINI_API_KEY)
+        self.model_name = GEMINI_MODEL
+
+    def _generate(self, prompt):
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=prompt
+        )
+        return response.text
 
     def analyze_video(self, transcript):
         try:
             prompt = ANALYSIS_PROMPT.format(transcript=transcript)
-            response = self.model.generate_content(prompt)
-            return {'success': True, 'analysis': response.text}
+            return {'success': True, 'analysis': self._generate(prompt)}
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
     def analyze_author_patterns(self, analyses_text):
         try:
             prompt = AUTHOR_PATTERN_PROMPT.format(analyses=analyses_text)
-            response = self.model.generate_content(prompt)
-            return {'success': True, 'analysis': response.text}
+            return {'success': True, 'analysis': self._generate(prompt)}
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
@@ -98,8 +103,7 @@ class GeminiAPI:
                 analyses=analyses if analyses else "（分析結果なし）",
                 theme=theme if theme else "自由"
             )
-            response = self.model.generate_content(prompt)
-            return {'success': True, 'skit': response.text}
+            return {'success': True, 'skit': self._generate(prompt)}
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
@@ -125,7 +129,6 @@ class GeminiAPI:
 {char_b_info['name']}:
 ...
 '''
-            response = self.model.generate_content(prompt)
-            return {'success': True, 'skit': response.text}
+            return {'success': True, 'skit': self._generate(prompt)}
         except Exception as e:
             return {'success': False, 'error': str(e)}

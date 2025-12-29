@@ -457,9 +457,10 @@ class ComedyAnalyzer:
             self.set_status("先に各作者のパターン分析を行ってください")
             return
         try:
-            response = self.gemini.model.generate_content(f"以下は複数のコメディ作者のパターン分析結果です。全体を通して見られる面白いコメディの共通法則を抽出してください。\n\n{patterns_text}")
+            prompt = f"以下は複数のコメディ作者のパターン分析結果です。全体を通して見られる面白いコメディの共通法則を抽出してください。\n\n{patterns_text}"
+            result = self.gemini._generate(prompt)
             self.global_analysis_text.delete("1.0", tk.END)
-            self.global_analysis_text.insert(tk.END, response.text)
+            self.global_analysis_text.insert(tk.END, result)
             self.set_status("全体解析完了")
         except Exception as e:
             self.set_status(f"エラー: {e}")

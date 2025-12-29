@@ -102,3 +102,30 @@ class GeminiAPI:
             return {'success': True, 'skit': response.text}
         except Exception as e:
             return {'success': False, 'error': str(e)}
+
+    def convert_to_character(self, skit, char_a_info, char_b_info):
+        try:
+            prompt = f'''
+以下のコントを、指定されたキャラクターの口調に変換してください。
+内容は変えず、口調だけを変えてください。
+
+## キャラA: {char_a_info['name']}
+口調: {char_a_info['tone']}
+例: {char_a_info['example']}
+
+## キャラB: {char_b_info['name']}
+口調: {char_b_info['tone']}
+例: {char_b_info['example']}
+
+## 元のコント
+{skit}
+
+## 出力形式
+{char_a_info['name']}:
+{char_b_info['name']}:
+...
+'''
+            response = self.model.generate_content(prompt)
+            return {'success': True, 'skit': response.text}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}

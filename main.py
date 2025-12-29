@@ -5,11 +5,23 @@ from youtube_api import YouTubeAPI
 from gemini_api import GeminiAPI
 
 class ComedyAnalyzer:
-    VOICEVOX_CHARACTERS = [
-        "ずんだもん",
-        "四国めたん",
-        "春日部つむぎ",
-    ]
+    VOICEVOX_CHARACTERS = {
+        "ずんだもん": {
+            "role": "ボケ",
+            "tone": "語尾に「〜のだ」「〜なのだ」を使う。子供っぽく無邪気。",
+            "example": "それはすごいのだ！ / わからないのだ… / やってみるのだ"
+        },
+        "四国めたん": {
+            "role": "ツッコミ",
+            "tone": "大人っぽく落ち着いている。丁寧語だが冷静にツッコむ。",
+            "example": "それはおかしいですね / なぜそうなるんですか / 意味がわかりません"
+        },
+        "春日部つむぎ": {
+            "role": "どちらでも",
+            "tone": "明るく元気。ギャルっぽい。語尾に「〜じゃん」「〜だよね」を使う。",
+            "example": "まじ？それやばくない？ / いいじゃんいいじゃん！ / ウケるんだけど"
+        },
+    }
 
     def __init__(self):
         self.root = tk.Tk()
@@ -166,16 +178,18 @@ class ComedyAnalyzer:
         tk.Button(left_frame, text="ショートコント生成", command=self.generate_skit, bg="#ff9f4a", fg="white", width=20, height=2).pack(pady=10)
         ttk.Separator(left_frame, orient='horizontal').pack(fill=tk.X, pady=10)
         ttk.Label(left_frame, text="VOICEVOX割り当て:").pack(anchor="w")
+        char_names = list(self.VOICEVOX_CHARACTERS.keys())
         char_frame = ttk.Frame(left_frame)
         char_frame.pack(fill=tk.X, pady=5)
         ttk.Label(char_frame, text="A:").pack(side=tk.LEFT)
-        self.char_a_combo = ttk.Combobox(char_frame, values=self.VOICEVOX_CHARACTERS, width=12)
+        self.char_a_combo = ttk.Combobox(char_frame, values=char_names, width=12)
         self.char_a_combo.pack(side=tk.LEFT, padx=2)
         self.char_a_combo.current(0)
         ttk.Label(char_frame, text="B:").pack(side=tk.LEFT, padx=(5, 0))
-        self.char_b_combo = ttk.Combobox(char_frame, values=self.VOICEVOX_CHARACTERS, width=12)
+        self.char_b_combo = ttk.Combobox(char_frame, values=char_names, width=12)
         self.char_b_combo.pack(side=tk.LEFT, padx=2)
         self.char_b_combo.current(1)
+        tk.Button(left_frame, text="口調変換", command=self.convert_to_character, bg="#4aff9f", fg="black", width=20).pack(pady=5)
         tk.Button(left_frame, text="台本コピー", command=self.copy_script, bg="#9f4aff", fg="white", width=20).pack(pady=5)
         right_frame = ttk.Frame(tab)
         right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -289,12 +303,43 @@ class ComedyAnalyzer:
                 lines.append(f'{char_a}「{line[2:].strip()}」')
             elif line.startswith('B:'):
                 lines.append(f'{char_b}「{line[2:].strip()}」')
+            elif line.startswith(f'{char_a}:'):
+                lines.append(f'{char_a}「{line[len(char_a)+1:].strip()}」')
+            elif line.startswith(f'{char_b}:'):
+                lines.append(f'{char_b}「{line[len(char_b)+1:].strip()}」')
             elif line:
                 lines.append(line)
         result = '\n'.join(lines)
         self.root.clipboard_clear()
         self.root.clipboard_append(result)
         self.set_status(f"台本をコピーしました（{char_a} / {char_b}）")
+
+    def convert_to_character(self):
+        skit = self.generated_skit_text.get("1.0", tk.END).strip()
+        if not skit:
+            self.set_status("先にコントを生成してください")
+            return
+        char_a_name = self.char_a_combo.get()
+        char_b_name = self.char_b_combo.get()
+        char_a_info = {
+            'name': char_a_name,
+            'tone': self.VOICEVOX_CHARACTERS[char_a_name]['tone'],
+            'example': self.VOICEVOX_CHARACTERS[char_a_name]['example']
+        }
+        char_b_info = {
+            'name': char_b_name,
+            'tone': self.VOICEVOX_CHARACTERS[char_b_name]['tone'],
+            'example': self.VOICEVOX_CHARACTERS[char_b_name]['example']
+        }
+        self.set_status(f"口調変換中（{char_a_name} / {char_b_name}）...")
+        self.root.update()
+        result = self.gemini.convert_to_character(skit, char_a_info, char_b_info)
+        if result['success']:
+            self.generated_skit_text.delete("1.0", tk.END)
+            self.generated_skit_text.insert(tk.END, result['skit'])
+            self.set_status(f"口調変換完了（{char_a_name} / {char_b_name}）")
+        else:
+            self.set_status(f"変換エラー: {result['error']}")
 
     def create_videos_tab(self):
         tab = ttk.Frame(self.notebook)

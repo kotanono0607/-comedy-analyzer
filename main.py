@@ -46,6 +46,7 @@ class ComedyAnalyzer:
         ttk.Label(top_frame, text="YouTube URL:").pack(side=tk.LEFT)
         self.url_entry = tk.Entry(top_frame, width=50, font=("Arial", 11))
         self.url_entry.pack(side=tk.LEFT, padx=5)
+        tk.Button(top_frame, text="貼り付け", command=self.paste_url, bg="#666666", fg="white").pack(side=tk.LEFT)
         ttk.Label(top_frame, text="作者:").pack(side=tk.LEFT, padx=(20, 5))
         self.author_combo = ttk.Combobox(top_frame, width=20)
         self.author_combo.pack(side=tk.LEFT)
@@ -78,6 +79,16 @@ class ComedyAnalyzer:
             self.author_combo.set(name)
             self.refresh_authors_list()
             self.set_status(f"作者「{name}」を追加しました")
+
+    def paste_url(self):
+        try:
+            clipboard = self.root.clipboard_get()
+            if clipboard:
+                self.url_entry.delete(0, tk.END)
+                self.url_entry.insert(0, clipboard.strip())
+                self.set_status("URLを貼り付けました")
+        except tk.TclError:
+            self.set_status("クリップボードにテキストがありません")
 
     def fetch_transcript(self):
         url = self.url_entry.get().strip()

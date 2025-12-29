@@ -32,28 +32,32 @@ AUTHOR_PATTERN_PROMPT = '''
 '''
 
 GENERATE_SKIT_PROMPT = '''
-以下は「{author_name}」というコメディ作者のパターン分析結果です。
-この作者の特徴を完全に再現した、オリジナルのショートコント台本を生成してください。
+以下は「{author_name}」というコメディ作者の実際のセリフサンプルです。
+このセリフの「言い回し」「口調」「ニュアンス」「間の取り方」を徹底的に模倣して、
+オリジナルのショートコント台本を生成してください。
+
+## 最重要：セリフのニュアンス再現
+- 実際のセリフサンプルの言葉選び、語尾、リズムを完全にコピーする
+- この作者特有の「クセ」や「言い回し」をそのまま使う
+- ツッコミの温度感（強め/弱め/冷静/激しい）を再現する
+- ボケの飛躍度合いを同じレベルに保つ
 
 ## 生成ルール
-1. この作者特有のボケパターンを使用する
-2. この作者特有のツッコミパターンを使用する
-3. この作者がよく使う構造（導入→展開→オチ）を踏襲する
-4. 1〜2分程度で演じられる長さ
-5. 台本形式で出力（登場人物名: セリフ）
+1. セリフサンプルにある表現をベースに新しいネタを作る
+2. 1〜2分程度で演じられる長さ
+3. 台本形式で出力
 
-## テーマ（オプション）
+## テーマ
 {theme}
 
-## 作者のパターン分析
+## 実際のセリフサンプル（これを模倣する）
+{transcripts}
+
+## 参考：パターン分析（補助情報）
 {pattern}
 
 ## 出力形式
 タイトル: 〇〇
-
-【登場人物】
-- A: 説明
-- B: 説明
 
 【台本】
 A: セリフ
@@ -82,11 +86,12 @@ class GeminiAPI:
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
-    def generate_short_skit(self, author_name, pattern, theme="自由"):
+    def generate_short_skit(self, author_name, pattern, transcripts, theme="自由"):
         try:
             prompt = GENERATE_SKIT_PROMPT.format(
                 author_name=author_name,
-                pattern=pattern,
+                pattern=pattern if pattern else "（パターン分析なし）",
+                transcripts=transcripts,
                 theme=theme if theme else "自由"
             )
             response = self.model.generate_content(prompt)

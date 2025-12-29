@@ -67,5 +67,14 @@ class Database:
     def get_author_pattern(self, author_id):
         return self.conn.execute("SELECT * FROM author_patterns WHERE author_id = ?", (author_id,)).fetchone()
 
+    def get_transcripts_by_author(self, author_id):
+        return self.conn.execute("""
+            SELECT t.content, v.video_id as youtube_id
+            FROM transcripts t
+            JOIN videos v ON t.video_id = v.id
+            WHERE v.author_id = ?
+            ORDER BY v.created_at DESC
+        """, (author_id,)).fetchall()
+
     def close(self):
         self.conn.close()

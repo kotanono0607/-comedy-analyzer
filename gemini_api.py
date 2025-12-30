@@ -108,7 +108,7 @@ class GeminiAPI:
                 analyses=analyses if analyses else "（分析結果なし）",
                 theme=theme if theme else "自由"
             )
-            return {'success': True, 'skit': self._generate(prompt)}
+            return {'success': True, 'skit': self._generate(prompt), 'prompt': prompt}
         except Exception as e:
             return {'success': False, 'error': str(e)}
 

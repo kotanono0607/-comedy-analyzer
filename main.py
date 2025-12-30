@@ -219,11 +219,36 @@ class ComedyAnalyzer:
         ttk.Label(pattern_frame, text="作者の共通パターン:").pack(anchor="w")
         self.author_pattern_text = scrolledtext.ScrolledText(pattern_frame, width=50, height=4, font=("Arial", 10), bg="#1e1e1e", fg="white")
         self.author_pattern_text.pack(pady=5, fill=tk.X)
+        # プロンプト表示エリア（折りたたみ可能）
+        prompt_header_frame = ttk.Frame(right_frame)
+        prompt_header_frame.pack(fill=tk.X, pady=(10, 0))
+        ttk.Label(prompt_header_frame, text="送信プロンプト:").pack(side=tk.LEFT)
+        self.prompt_toggle_btn = tk.Button(prompt_header_frame, text="▼ 表示", command=self.toggle_prompt_view, bg="#666666", fg="white", font=("Arial", 9), width=8)
+        self.prompt_toggle_btn.pack(side=tk.LEFT, padx=5)
+        self.prompt_frame = ttk.Frame(right_frame)
+        self.prompt_frame.pack(fill=tk.X, pady=5)
+        self.prompt_text = scrolledtext.ScrolledText(self.prompt_frame, width=100, height=8, font=("Arial", 9), bg="#0d0d1a", fg="#88aaff")
+        self.prompt_text.pack(fill=tk.X)
+        self.prompt_text.insert(tk.END, "（コント生成時にプロンプトがここに表示されます）")
+        self.prompt_visible = True
+
         ttk.Label(right_frame, text="生成されたショートコント:").pack(anchor="w", pady=(10, 0))
-        self.generated_skit_text = scrolledtext.ScrolledText(right_frame, width=100, height=25, font=("Arial", 11), bg="#1e1e1e", fg="#ffdd88")
+        self.generated_skit_text = scrolledtext.ScrolledText(right_frame, width=100, height=18, font=("Arial", 11), bg="#1e1e1e", fg="#ffdd88")
         self.generated_skit_text.pack(pady=5, fill=tk.BOTH, expand=True)
         self.refresh_authors_list()
         self.refresh_skits_list()
+
+    def toggle_prompt_view(self):
+        """プロンプト表示エリアの表示/非表示を切り替える"""
+        if self.prompt_visible:
+            self.prompt_frame.pack_forget()
+            self.prompt_toggle_btn.config(text="▶ 表示")
+            self.prompt_visible = False
+        else:
+            # 生成されたショートコントのラベルの前に挿入
+            self.prompt_frame.pack(fill=tk.X, pady=5, after=self.prompt_toggle_btn.master)
+            self.prompt_toggle_btn.config(text="▼ 非表示")
+            self.prompt_visible = True
 
     def refresh_authors_list(self):
         self.authors_listbox.delete(0, tk.END)
@@ -298,6 +323,10 @@ class ComedyAnalyzer:
         self.root.update()
         result = self.gemini.generate_short_skit(author_name, pattern_text, transcripts_text, analyses_text, theme)
         if result['success']:
+            # プロンプトを表示
+            self.prompt_text.delete("1.0", tk.END)
+            self.prompt_text.insert(tk.END, result.get('prompt', ''))
+            # コントを表示
             self.generated_skit_text.delete("1.0", tk.END)
             self.generated_skit_text.insert(tk.END, result['skit'])
             self.set_status(f"「{author_name}」風ショートコント生成完了")
